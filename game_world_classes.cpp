@@ -1,7 +1,8 @@
 #include <game_world_classes.h>
 
-
 //--------------------class Tile------------------
+Tile::Tile()
+{}
 Tile::Tile(float pos_x,float pos_y,int type)
 {
     this->type=type;
@@ -20,7 +21,7 @@ Tile::Tile(float pos_x,float pos_y,int type)
     if(type==0){
         sf::Texture *txt_floor;
         txt_floor = new sf::Texture;
-        if(!(txt_floor->loadFromFile("floor.png"))){
+        if(!(txt_floor->loadFromFile("floor.jpg"))){
             std::cerr<<"could not load texture"<<std::endl;
         }
         txt_floor->setRepeated(true);
@@ -44,12 +45,17 @@ int Tile::getType()
 void Tile::setNode(float g, float h)
 {
     this->g=g;
-    this->h=h;
+    this->f=g+h;
 }
 
-void Tile::setParent(sf::Vector2f parent_pos)
+void Tile::setParent(Tile* parent_pos)
 {
         this->parent_pos = parent_pos;
+}
+
+Tile* Tile::getParent()
+{
+    return parent_pos;
 }
 
 float calculate_distance(Tile start,Tile end)
@@ -69,6 +75,21 @@ float calculate_gval(Tile start, Tile current)
 float Tile::getF()
 {
     return this->f;
+}
+
+float Tile::getG()
+{
+    return this->g;
+}
+
+void Tile::setVisited(bool state)
+{
+    this->visited = state;
+}
+
+bool Tile::wasVisited()
+{
+    return this->visited;
 }
 
 //------------------clas Map-----------------------------------------
@@ -129,34 +150,34 @@ std::vector<std::vector<Tile>> Map::getMap()
     return this->map;
 }
 
-std::vector<Tile> Map::getSuccesors(Tile parent)
+std::vector<Tile*> Map::getSuccesors(Tile parent)
 {
     sf::Vector2f parent_cords = getTile(parent.getSprite().getPosition());
-    std::vector<Tile> succesors;
-    Tile a = map[parent_cords.x][parent_cords.y+1];
-    if(a.getType()==0)
+    std::vector<Tile*> succesors;
+    Tile* a = &map[parent_cords.x][parent_cords.y+1];
+    if(a->getType()==0)
         succesors.emplace_back(a);
-    Tile b = map[parent_cords.x -1][parent_cords.y+1];
-    if(a.getType()==0)
-        succesors.emplace_back(b);
-    Tile c = map[parent_cords.x -1][parent_cords.y];
-    if(a.getType()==0)
-        succesors.emplace_back(c);
-    Tile d = map[parent_cords.x -1][parent_cords.y -1];
-    if(a.getType()==0)
-        succesors.emplace_back(d);
-    Tile e = map[parent_cords.x][parent_cords.y -1];
-    if(a.getType()==0)
-        succesors.emplace_back(e);
-    Tile f = map[parent_cords.x +1][parent_cords.y -1];
-    if(a.getType()==0)
-        succesors.emplace_back(f);
-    Tile g = map[parent_cords.x +1][parent_cords.y];
-    if(a.getType()==0)
-        succesors.emplace_back(g);
-    Tile h = map[parent_cords.x +1][parent_cords.y +1];
-    if(a.getType()==0)
-        succesors.emplace_back(h);
+    Tile* a1 = &map[parent_cords.x-1][parent_cords.y+1];
+    if(a1->getType()==0)
+        succesors.emplace_back(a1);
+    Tile* a2 = &map[parent_cords.x-1][parent_cords.y];
+    if(a2->getType()==0)
+        succesors.emplace_back(a2);
+    Tile* a3 = &map[parent_cords.x-1][parent_cords.y-1];
+    if(a3->getType()==0)
+        succesors.emplace_back(a3);
+    Tile* a4 = &map[parent_cords.x-1][parent_cords.y];
+    if(a4->getType()==0)
+        succesors.emplace_back(a4);
+    Tile* a5 = &map[parent_cords.x+1][parent_cords.y-1];
+    if(a5->getType()==0)
+        succesors.emplace_back(a5);
+    Tile* a6 = &map[parent_cords.x+1][parent_cords.y];
+    if(a6->getType()==0)
+        succesors.emplace_back(a6);
+    Tile* a7 = &map[parent_cords.x+1][parent_cords.y+1];
+    if(a7->getType()==0)
+        succesors.emplace_back(a7);
 
     return succesors;
 }
@@ -166,13 +187,13 @@ Colectible::Colectible(float pos_x,float pos_y)
     {
         sf::Texture *txt_collectible;
         txt_collectible = new sf::Texture;
-        if(!(txt_collectible->loadFromFile("wall.png"))){
+        if(!(txt_collectible->loadFromFile("collectible.png"))){
             std::cerr<<"could not load texture"<<std::endl;
         }
         txt_collectible->setRepeated(true);
         colectible.setPosition(pos_x,pos_y);
         colectible.setTexture(*txt_collectible);
-        colectible.scale(0.5,0.5);
+        colectible.scale(0.8,0.8);
     }
 
 bool Colectible::isPicked()
@@ -195,16 +216,7 @@ sf::Sprite Colectible::getObject()
 //---------------------------class Entity-----------------------------------------------
 Entity::Entity(float pos_x, float pos_y)
     {
-        sf::Texture *txt_guy;
-        txt_guy = new sf::Texture;
-        if(!(txt_guy->loadFromFile("guy.png"))){
-            std::cerr<<"could not load texture"<<std::endl;
-        }
         this->guy.setPosition(pos_x,pos_y);
-        this->guy.scale(0.7142,0.7142);
-        this->guy.setOrigin(15.0,15.0);
-        this->guy.setRotation(90);
-        this->guy.setTexture(*txt_guy);
     };
 
 Entity::Entity()
@@ -217,7 +229,17 @@ sf::Sprite Entity::getGuy()
 
 Character::Character(float pos_x, float pos_y,std::vector<sf::Sprite> shapes)
     : Entity(pos_x,pos_y), walls(shapes)
-{}
+{
+    sf::Texture *txt_guy;
+    txt_guy = new sf::Texture;
+    if(!(txt_guy->loadFromFile("guy.png"))){
+        std::cerr<<"could not load texture"<<std::endl;
+    }
+    this->guy.scale(0.7142,0.7142);
+    this->guy.setOrigin(15.0,15.0);
+    this->guy.setRotation(90);
+    this->guy.setTexture(*txt_guy);
+}
 
 Character::Character()
 {}
@@ -301,7 +323,18 @@ Enemy::Enemy()
 {}
 
 Enemy::Enemy(float pos_x, float pos_y,Map m)
-    : Entity(pos_x,pos_y), map(m) {};
+    : Entity(pos_x,pos_y), map(m)
+{
+    sf::Texture *txt_guy;
+    txt_guy = new sf::Texture;
+    if(!(txt_guy->loadFromFile("enemy.png"))){
+        std::cerr<<"could not load texture"<<std::endl;
+    }
+    this->guy.scale(0.7142,0.7142);
+    this->guy.setOrigin(15.0,15.0);
+    this->guy.setRotation(90);
+    this->guy.setTexture(*txt_guy);
+};
 
 
 void Enemy::movement(const sf::Time elapsed, sf::RenderWindow &window, Character target)
@@ -342,43 +375,230 @@ void Enemy::rotate(sf::RenderWindow & window,Character target)
     this->guy.setRotation(angle);
 }
 
-void Enemy::find_path(sf::Vector2f target)
+std::vector<sf::Vector2f> Enemy::find_path(sf::Vector2f target, Map map)
 {
-    std::list<Tile> open;
-    std::list<Tile> closed;
-    sf::Vector2f start_pos = this->map.getTile(this->getGuy().getPosition());
-    Tile begin = map.getMap()[start_pos.x][start_pos.y];
-    sf::Vector2f end_pos = this->map.getTile(target);
+    std::list<Tile*> *open = new std::list<Tile*>;
+
+    sf::Vector2f start_pos = map.getTile(this->getGuy().getPosition());
+    Tile begining = map.getMap()[start_pos.x][start_pos.y];
+    sf::Vector2f end_pos = map.getTile(target);
     Tile end = map.getMap()[end_pos.x][end_pos.y];
+    Tile* fin = new Tile;
 
-    begin.setNode(0,calculate_distance(begin,end));
-    begin.setParent(start_pos);
-    open.push_back(begin);
+    begining.setNode(0,calculate_distance(begining,end));
+    begining.setParent(&begining);
+    open->push_back(&begining);
 
-    while(!open.empty())
+    while(!open->empty())
     {
-        auto q = open.begin();
-        for( auto i=open.begin();i!=open.end();i++){
-            if(q->getF()>i->getF())
-                q=i;
+
+        open->sort([](Tile* x,Tile* y){return x->getF()<y->getF();});
+        while(!open->empty()&&open->front()->wasVisited()){
+            open->pop_front();
         }
-        open.erase(q);
-        auto succesors = map.getSuccesors(*q);
-        for(auto &current : succesors)
-        {
-            current.setParent(q->getSprite().getPosition());
-        }
-        for(auto &current : succesors)
+        if(open->empty())
+            break;
+
+        Tile* current = open->front();
+        current->setVisited(true);
+
+        std::vector<Tile*> *succesors = new std::vector<Tile*>;
+        *succesors = map.getSuccesors(*current);
+
+        for(auto &neighbour : *succesors)
         {
 
+            double g_temp = current->getG() + calculate_distance(*current,*neighbour);
+            if(g_temp<neighbour->getG())
+            {
+                 neighbour->setParent(current);
+                 neighbour->setNode(g_temp,calculate_distance(*neighbour,end));
+                 if(!neighbour->wasVisited()){
+                     open->push_back(neighbour);
+                 }
+                 if(current->getSprite().getPosition()==end.getSprite().getPosition()){
+                     fin=current;
+                     break;
+                 }
+            }
         }
     }
+    Tile* x = fin;
+    std::vector<sf::Vector2f> path;
+    while(x!=x->getParent())
+    {
+        auto pos=x->getSprite().getPosition();
+        path.emplace_back(pos);
+        x=x->getParent();
+    }
+    path.emplace_back(x->getSprite().getPosition());
+    std::reverse(path.begin(),path.end());
 
+    return path;
+}
+
+void Enemy::follow(sf::Time elapsed,std::vector<sf::Vector2f> path)
+{
+    this->move(elapsed,path[path_nr]);
+    if((abs(path[path_nr].x-this->getGuy().getPosition().x)<1)&&
+       (abs(path[path_nr].y-this->getGuy().getPosition().y)<1))
+        path_nr++;
+}
+
+void Enemy::move(sf::Time elapsed,sf::Vector2f dest)
+{
+    sf::Vector2f pos = this->guy.getPosition();
+    double dx = dest.x - pos.x;
+    double dy = dest.y - pos.y;
+    double angle = (180*atan2(dy,dx))/M_PI;
+    this->guy.setRotation(angle);
+    double v_x = cos(angle)*80;
+    double v_y = sin(angle)*80;
+    this->guy.move(v_x*elapsed.asSeconds(),v_y*elapsed.asSeconds());
+}
+
+Window::Window() : window(sf::VideoMode(1000,640),"Lights out")
+{}
+
+Button::Button(double pos_x,double pos_y, unsigned int size, std::string txt)
+{
+    sf::Font *font;
+    font = new sf::Font;
+    font->loadFromFile("font.ttf");
+    if(!font->loadFromFile("font.ttf")){
+        std::cout<<"could not load a font";
+    }
+    this->text.setFont(*font);
+    this->text.setPosition(pos_x,pos_y);
+    this->text.setCharacterSize(size);
+    this->text.setString(txt);
+    this->text.setFillColor(sf::Color::Black);
+}
+
+void Button::click(sf::Event event)
+{
+        sf::FloatRect bounds = this->text.getGlobalBounds();
+        if((event.mouseButton.x>=bounds.left)&&(event.mouseButton.x<=bounds.left+bounds.width)
+                &&(event.mouseButton.y>=bounds.top)&&(event.mouseButton.y<=bounds.top+bounds.height)){
+            if(event.type== sf::Event::MouseButtonPressed){
+                this->text.setFillColor(sf::Color::Red);
+                this->clicked=true;
+            }
+            if(event.type == sf::Event::MouseButtonReleased){
+                this->text.setFillColor(sf::Color::Black);
+            }
+        }
+}
+
+void Button::draw(sf::RenderWindow* window)
+{
+    window->draw(this->text);
+}
+
+bool Button::was_clicked()
+{
+    return this->clicked;
+}
+
+Menu::Menu() : Window()
+{
+    Button title(235,0,150,"Lights Out");
+    menu.emplace_back(title);
+
+    Button play(445,150,75,"play");
+    menu.emplace_back(play);
+
+    Button instructions(335,220,75,"instructions");
+    menu.emplace_back(instructions);
+
+    Button exit(445,290,75,"exit");
+    menu.emplace_back(exit);
+
+    sf::Texture *txt;
+    txt = new sf::Texture;
+    if(!(txt->loadFromFile("flashlight.png"))){
+        std::cerr<<"could not load texture"<<std::endl;
+    }
+     this->flashlight.setTexture(*txt);
+     this->flashlight.setPosition(490,600);
+}
+
+int Menu::loop()
+{
+    sf::RenderTexture mask;
+    mask.create(1000,640);
+
+    sf::ConvexShape light;
+    light.setPointCount(3);
+    light.setPoint(0,sf::Vector2f(40,0));
+    light.setPoint(1,sf::Vector2f(960,0));
+    light.setPoint(2,sf::Vector2f(500,600));
+    light.setFillColor(sf::Color(255,255,255,1));
+
+    sf::Sprite spr;
+    spr.setPosition(0,0);
+    spr.setTexture(mask.getTexture(),true);
+
+    bool light_on = false;
+
+    while(window.isOpen())
+    {
+        sf::Event event;
+        while(window.pollEvent(event))
+        {
+            if(event.type == sf::Event::Closed)
+                window.close();
+            if(event.type == sf::Event::MouseButtonPressed){
+                for(auto i=menu.begin()+1;i<menu.end();i++){
+                    i->click(event);
+                }
+                sf::FloatRect bounds = this->flashlight.getGlobalBounds();
+                if((event.mouseButton.x>=bounds.left)&&(event.mouseButton.x<=bounds.left+bounds.width)
+                        &&(event.mouseButton.y>=bounds.top)&&(event.mouseButton.y<=bounds.top+bounds.height)){
+                    light_on=!light_on;
+                }
+            }
+            if(event.type == sf::Event::MouseButtonReleased){
+                for(auto i=menu.begin()+1;i<menu.end();i++){
+                    i->click(event);
+                }
+            }
+
+        }
+        mask.clear(sf::Color::Black);
+        if(light_on==true){
+            mask.draw(light,sf::BlendNone);
+        }
+        mask.display();
+
+        spr.setTexture(mask.getTexture(),true);
+
+        window.clear(sf::Color::White);
+        for(auto &option : menu){
+            option.draw(&window);
+        }
+        window.draw(spr);
+        window.draw(flashlight);
+        window.display();
+
+        if(menu[Play].was_clicked()==true){
+            window.close();
+            return 1;
+        }
+        if(menu[Exit].was_clicked()==true){
+            window.close();
+            return 0;
+        }
+    }
 }
 
 //----------------------------------class Scene--------------------------------------
-Scene::Scene() : window(sf::VideoMode(1000,640),"Lights out")
+Scene::Scene() : Window()
 {
+//    score.setFont(font);
+//    score.setPosition(60,60);
+//    score.setString("0/5");
+
     std::vector<std::vector<int>> map(16,std::vector<int>(25));
     map[0]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     map[1]={1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1};
@@ -401,22 +621,34 @@ Scene::Scene() : window(sf::VideoMode(1000,640),"Lights out")
     this->map=m;
 
     Colectible col(250.0,250.0);
-    Colectible col1(930,500);
+    Colectible col1(920,500);
     Colectible col2(550,60);
+    Colectible col3(70,560);
+    Colectible col4(570,560);
     this->colectibles.emplace_back(col);
     this->colectibles.emplace_back(col1);
     this->colectibles.emplace_back(col2);
+    this->colectibles.emplace_back(col3);
+    this->colectibles.emplace_back(col4);
 
     Character guy(430.0,550.0,m.getWalls());
-    Enemy en(20.0,20.0,m);
-    this->enemy=en;
+    Enemy en(60.0,60.0,m);
+    Enemy en1(560.0,560.0,m);
+    Enemy en2(800.0,70.0,m);
+    this->enemies.emplace_back(en);
+    this->enemies.emplace_back(en1);
+    this->enemies.emplace_back(en2);
     this->hero = guy;
 }
 
-void Scene::game_loop()
+int Scene::loop()
 {
     sf::Clock clock;
 
+    std::vector<std::vector<sf::Vector2f>> paths;
+    for(auto i = enemies.begin();i<enemies.end();i++){
+        paths.emplace_back(i->find_path(hero.getGuy().getPosition(),map));
+    }
     while(window.isOpen())
     {
         sf::Event event;
@@ -428,26 +660,45 @@ void Scene::game_loop()
         window.clear(sf::Color::Black);
 
         sf::Time elapsed = clock.restart();
-
+        timer+=elapsed.asSeconds();
         this->map.draw_map(window);
 
-        for(auto &col : colectibles){
-            if(col.isPicked()==false)
+        for(auto i=colectibles.begin();i<colectibles.end();i++){
+            window.draw(i->getObject());
+            if(i->isPicked()==true)
             {
-               window.draw(col.getObject());
+               colectibles.erase(i);
+               colectible_count++;
+               std::string sc= std::to_string(colectible_count) + "/5";
+               score.setString(sc);
             }
         }
-        enemy.movement(elapsed,window,hero);
-        window.draw(enemy.getGuy());
+        for(auto i = 0;i<enemies.size();i++){
+            window.draw(enemies[i].getGuy());
+            enemies[i].follow(elapsed,paths[i]);
+        }
 
         hero.movement(elapsed,window);
         hero.collect(colectibles);
         window.draw(hero.getGuy());
 
+        window.draw(score);
+
         window.display();
 
-        auto pos = map.getTile(hero.getGuy().getPosition());
-        std::cout<<pos.x<<" "<<pos.y<<std::endl;
+        if(colectible_count==5){
+            window.close();
+            std::cout<<"WIN";
+        }
+
     }
+
+//    for(auto i = x.begin() ;i<x.end();i++)
+//    {
+//        std::cout<<i->x<<" "<<i->y<<std::endl;
+//    }
+//    auto pos = map.getTile(hero.getGuy().getPosition());
+//    std::cout<<pos.x<<" "<<pos.y<<" "<<map.getMap()[pos.x][pos.y].getType()<<std::endl;
+    return 1;
 }
 

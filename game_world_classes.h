@@ -6,6 +6,7 @@
 #include<math.h>
 #include <algorithm>
 #include <list>
+#include <algorithm>
 
 
 class Tile
@@ -14,19 +15,24 @@ private:
     sf::Sprite tile;
     sf::Vector2f position;
     int type;
-    float g=0;
-    float h=0;
+    bool visited=false;
+    float g=3000;
     float f=0;
-    sf::Vector2f parent_pos={0,0};
+    Tile* parent_pos;
 public:
+    Tile();
     Tile(float pos_x,float pos_y,int type);
     sf::Sprite getSprite();
     int getType();
     void setNode(float g,float h);
-    void setParent(sf::Vector2f parent_pos);
+    void setParent(Tile* parent_pos);
+    Tile* getParent();
     friend float calculate_gval(Tile start,Tile current);
     friend float calculate_distance(Tile start,Tile end);
     float getF();
+    float getG();
+    bool wasVisited();
+    void setVisited(bool state);
 };
 
 
@@ -41,7 +47,7 @@ public:
     void draw_map(sf::RenderWindow &window);
     std::vector<sf::Sprite> getWalls();
     sf::Vector2f getTile(sf::Vector2f pos);
-    std::vector<Tile> getSuccesors(Tile parent);
+    std::vector<Tile*> getSuccesors(Tile parent);
     std::vector<std::vector<Tile>> getMap();
 };
 
@@ -91,25 +97,63 @@ class Enemy : public Entity
 {
 private:
     Map map;
+    int path_nr=0;
 public:
     Enemy();
     Enemy(float pos_x, float pos_y,Map m);
     void movement(const sf::Time elapsed, sf::RenderWindow &window,Character target);
-    void find_path(sf::Vector2f);
+    void follow(sf::Time elapsed, std::vector<sf::Vector2f> path);
+    void move(sf::Time elapsed,sf::Vector2f dest);
+    std::vector<sf::Vector2f> find_path(sf::Vector2f t,Map m);
     void rotate(sf::RenderWindow & window,Character target);
 };
 
-class Scene
+class Window
+{
+protected:
+    sf::RenderWindow window;
+public:
+    Window();
+    virtual int loop()=0;
+};
+
+class Button
 {
 private:
-    sf::RenderWindow window;
+    sf::Text text;
+    bool clicked = false;
+public:
+    Button(double pos_x,double pos_y,unsigned int size, std::string txt);
+    void click(sf::Event);
+    bool was_clicked();
+    void draw(sf::RenderWindow* window);
+};
+
+class Menu : public Window
+{
+private:
+    enum Option {Title,Play,Instructions,Exit};
+    std::vector<Button> menu;
+    sf::Sprite flashlight;
+public:
+    Menu();
+    int loop();
+
+};
+
+class Scene : public Window
+{
+private:
     Character hero;
-    Enemy enemy;
+    std::vector<Enemy> enemies;
     Map map;
     std::vector<Colectible> colectibles;
+    sf::Text score;
+    double timer=0;
+    int colectible_count = 0;
 public:
     Scene();
-    void game_loop();
+    int loop();
 };
 
 
