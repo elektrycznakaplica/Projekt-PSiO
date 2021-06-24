@@ -13,9 +13,19 @@ int main()
         Menu menu;
         choice=menu.loop();
         if(choice == 1){
-            Scene scene;
-            scene.loop();
+            int decision;
+            do{
+                Difficulty choose;
+                int mode = choose.loop();
+                Scene scene(mode);
+                decision = scene.loop();
+            }while(decision!=0);
         }
-    }while(choice!=0);
+        if(choice == 2){
+            Option instruct;
+            instruct.loop();
+        }
+    }while(choice!=3 && choice!=0);
+
 
 }
